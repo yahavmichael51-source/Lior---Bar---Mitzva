@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>אישור הגעה לבר המצווה</title>
+  <meta name="description" content="אישור הגעה לבר המצווה" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <svg class="star" viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round">
+        <path d="M50 8 L86 71 L14 71 Z" /><path d="M50 92 L14 29 L86 29 Z" />
+      </svg>
+      <h1>אישור הגעה לבר המצווה של <span class="name" id="childName">ליאור</span></h1>
+      <div class="meta" id="meta"></div>
+    </header>
+
+    <section class="card" id="formCard">
+      <form id="rsvpForm" novalidate>
+        <div class="field">
+          <label for="firstName">שם פרטי <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="firstName" name="firstName" autocomplete="given-name" maxlength="60" required placeholder="איך קוראים לך?" />
+        </div>
+
+        <fieldset class="field">
+          <legend>האם תגיע/י?</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="status" value="yes" /><span>מגיע/ה</span></label>
+            <label class="choice"><input type="radio" name="status" value="no" /><span>לא מגיע/ה</span></label>
+            <label class="choice"><input type="radio" name="status" value="maybe" /><span>עוד לא יודע/ת</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="field" id="peopleField" hidden>
+          <legend>כמה אנשים יגיעו איתך?</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="people" value="1" /><span>רק אני</span></label>
+            <label class="choice"><input type="radio" name="people" value="2" /><span>אני + 1</span></label>
+            <label class="choice"><input type="radio" name="people" value="3" /><span>אני + 2</span></label>
+          </div>
+        </fieldset>
+
+        <p class="error" id="error" role="alert"></p>
+        <button type="submit" class="btn primary big" id="submitBtn">שליחת תשובה</button>
+      </form>
+    </section>
+
+    <section class="card thanks" id="thanksCard" hidden>
+      <div class="check" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+      </div>
+      <h2 id="thanksTitle">תודה רבה!</h2>
+      <p id="thanksText">התשובה שלך נשמרה.</p>
+      <button type="button" class="btn" id="againBtn">שליחת תשובה נוספת</button>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

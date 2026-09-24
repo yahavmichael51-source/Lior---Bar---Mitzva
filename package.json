@@ -1,0 +1,28 @@
+{
+  "name": "lior-bar-mitzva-rsvp",
+  "version": "1.0.0",
+  "description": "אתר אישור הגעה לבר מצווה",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node test/e2e.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yahavmichael51-source/Lior---Bar---Mitzva.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yahavmichael51-source/Lior---Bar---Mitzva/issues"
+  },
+  "homepage": "https://github.com/yahavmichael51-source/Lior---Bar---Mitzva#readme",
+  "dependencies": {
+    "pg": "^8.23.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

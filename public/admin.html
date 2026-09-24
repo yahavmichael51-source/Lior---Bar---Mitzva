@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>דוח אישורי הגעה</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="wrap" id="loginView" hidden>
+    <header class="hero"><h1>כניסת מנהל</h1></header>
+    <section class="card">
+      <form id="loginForm">
+        <div class="field">
+          <label for="password">סיסמה</label>
+          <input type="password" id="password" autocomplete="current-password" required />
+        </div>
+        <p class="error" id="loginError" role="alert"></p>
+        <button class="btn primary big" type="submit">כניסה</button>
+      </form>
+    </section>
+  </main>
+
+  <main class="wrap wide" id="dashView" hidden>
+    <div class="topbar">
+      <h1>דוח אישורי הגעה</h1>
+      <div class="row">
+        <button class="btn small" id="refreshBtn" type="button">רענון</button>
+        <button class="btn small" id="logoutBtn" type="button">יציאה</button>
+      </div>
+    </div>
+
+    <section class="stats">
+      <div class="stat total"><div class="num" id="sTotal">0</div><div class="lbl">צפויים להגיע (כולל מלווים)</div></div>
+      <div class="stat yes"><div class="num" id="sYes">0</div><div class="lbl">ענו ״מגיע/ה״</div></div>
+      <div class="stat no"><div class="num" id="sNo">0</div><div class="lbl">ענו ״לא מגיע/ה״</div></div>
+      <div class="stat maybe"><div class="num" id="sMaybe">0</div><div class="lbl">ענו ״עוד לא יודע/ת״</div></div>
+    </section>
+
+    <details class="settings card">
+      <summary>פרטי האירוע שמוצגים לאורחים</summary>
+      <form class="grid-form" id="eventForm">
+        <label>שם הילד <input type="text" name="childName" maxlength="200" /></label>
+        <label>תאריך ושעה <input type="text" name="eventDate" maxlength="200" placeholder="לדוגמה: יום חמישי, 12.11.2026 בשעה 19:30" /></label>
+        <label>מיקום <input type="text" name="eventLocation" maxlength="200" placeholder="לדוגמה: אולמי הגן, רחוב הדקל 5, חיפה" /></label>
+        <div class="row"><button class="btn primary" type="submit">שמירה</button><span class="note" id="eventSaved"></span></div>
+      </form>
+    </details>
+
+    <div class="toolbar">
+      <label for="filter">הצגה:</label>
+      <select id="filter">
+        <option value="">כל התשובות</option>
+        <option value="yes">מגיע/ה</option>
+        <option value="no">לא מגיע/ה</option>
+        <option value="maybe">עוד לא יודע/ת</option>
+      </select>
+      <a class="btn small gold" id="csvLink" href="/api/admin/export.csv">ייצוא ל־CSV</a>
+      <span class="note" id="countNote"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>שם פרטי</th><th>תשובה</th><th>מספר אנשים</th><th>שעת שליחה</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>אין עדיין תשובות להצגה.</div>
+    </div>
+  </main>
+
+  <dialog id="editDialog">
+    <form id="editForm" method="dialog">
+      <h2>עריכת תשובה</h2>
+      <div class="field">
+        <label for="editName">שם פרטי</label>
+        <input type="text" id="editName" maxlength="60" required />
+      </div>
+      <div class="field">
+        <label for="editStatus">תשובה</label>
+        <select id="editStatus">
+          <option value="yes">מגיע/ה</option>
+          <option value="no">לא מגיע/ה</option>
+          <option value="maybe">עוד לא יודע/ת</option>
+        </select>
+      </div>
+      <div class="field" id="editPeopleField">
+        <label for="editPeople">מספר אנשים</label>
+        <select id="editPeople">
+          <option value="1">רק אני (1)</option>
+          <option value="2">אני + 1 (2)</option>
+          <option value="3">אני + 2 (3)</option>
+        </select>
+      </div>
+      <p class="error" id="editError" role="alert"></p>
+      <div class="row">
+        <button class="btn primary" type="submit" value="save">שמירה</button>
+        <button class="btn" type="button" id="editCancel">ביטול</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
