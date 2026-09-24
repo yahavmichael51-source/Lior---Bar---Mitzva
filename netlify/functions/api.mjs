@@ -10,6 +10,7 @@ let handle;
 
 export default async (request, context) => {
   handle ??= createApi(createBlobsStore(getStore({ name: 'rsvp', consistency: 'strong' })), {
+    adminUsername: (process.env.ADMIN_USERNAME || '').trim(),
     adminPassword: process.env.ADMIN_PASSWORD || '',
     sessionSecret: process.env.SESSION_SECRET,
   });

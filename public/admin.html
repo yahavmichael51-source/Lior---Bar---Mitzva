@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>דוח אישורי הגעה</title>
+  <title>סטטיסטיקה ונתונים</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -15,6 +15,10 @@
     <header class="hero"><h1>כניסת מנהל</h1></header>
     <section class="card">
       <form id="loginForm">
+        <div class="field">
+          <label for="username">שם משתמש</label>
+          <input type="text" id="username" autocomplete="username" autocapitalize="off" spellcheck="false" required />
+        </div>
         <div class="field">
           <label for="password">סיסמה</label>
           <input type="password" id="password" autocomplete="current-password" required />
@@ -27,8 +31,9 @@
 
   <main class="wrap wide" id="dashView" hidden>
     <div class="topbar">
-      <h1>דוח אישורי הגעה</h1>
+      <h1>סטטיסטיקה ונתונים</h1>
       <div class="row">
+        <a class="btn small" href="/">לאתר</a>
         <button class="btn small" id="refreshBtn" type="button">רענון</button>
         <button class="btn small" id="logoutBtn" type="button">יציאה</button>
       </div>
@@ -39,6 +44,22 @@
       <div class="stat yes"><div class="num" id="sYes">0</div><div class="lbl">ענו ״מגיע/ה״</div></div>
       <div class="stat no"><div class="num" id="sNo">0</div><div class="lbl">ענו ״לא מגיע/ה״</div></div>
       <div class="stat maybe"><div class="num" id="sMaybe">0</div><div class="lbl">ענו ״עוד לא יודע/ת״</div></div>
+    </section>
+
+    <section class="card breakdown">
+      <h2>פירוט המגיעים</h2>
+      <div class="kv">
+        <div><span>סה״כ תשובות שהתקבלו</span><b id="sResponses">0</b></div>
+        <div><span>משיבים שמגיעים</span><b id="sYes2">0</b></div>
+        <div><span>מלווים שיגיעו איתם</span><b id="sCompanions">0</b></div>
+        <div class="sum"><span>סה״כ אנשים שצפויים להגיע</span><b id="sTotal2">0</b></div>
+      </div>
+      <h3>לפי גודל הקבוצה</h3>
+      <table class="mini">
+        <thead><tr><th>קבוצה</th><th>מספר תשובות</th><th>סה״כ אנשים</th></tr></thead>
+        <tbody id="sizeRows"></tbody>
+      </table>
+      <p class="empty" id="sizeEmpty" hidden>עוד אין אישורי הגעה.</p>
     </section>
 
     <details class="settings card">
@@ -88,12 +109,8 @@
         </select>
       </div>
       <div class="field" id="editPeopleField">
-        <label for="editPeople">מספר אנשים</label>
-        <select id="editPeople">
-          <option value="1">רק אני (1)</option>
-          <option value="2">אני + 1 (2)</option>
-          <option value="3">אני + 2 (3)</option>
-        </select>
+        <label for="editPeople">מספר אנשים בסך הכול (כולל האורח)</label>
+        <input type="number" id="editPeople" inputmode="numeric" min="1" max="30" step="1" />
       </div>
       <p class="error" id="editError" role="alert"></p>
       <div class="row">

@@ -1,5 +1,6 @@
 (function () {
   var LABELS = { yes: 'מגיע/ה', no: 'לא מגיע/ה', maybe: 'עוד לא יודע/ת' };
+  function sizeLabel(n) { return n === 1 ? 'רק אני' : 'אני + ' + (n - 1); }
   var $ = function (id) { return document.getElementById(id); };
   var state = { responses: [], filter: '', editing: null };
   var timeFmt = new Intl.DateTimeFormat('he-IL', {
@@ -18,7 +19,7 @@
     });
   }
 
-  function showLogin() { $('dashView').hidden = true; $('loginView').hidden = false; $('password').focus(); }
+  function showLogin() { $('dashView').hidden = true; $('loginView').hidden = false; $('username').focus(); }
   function showDash() { $('loginView').hidden = true; $('dashView').hidden = false; }
 
   function load() {
@@ -28,6 +29,11 @@
       $('sYes').textContent = data.summary.yes;
       $('sNo').textContent = data.summary.no;
       $('sMaybe').textContent = data.summary.maybe;
+      $('sResponses').textContent = data.summary.responses;
+      $('sYes2').textContent = data.summary.yes;
+      $('sCompanions').textContent = data.summary.companions;
+      $('sTotal2').textContent = data.summary.totalPeople;
+      renderSizes(data.summary.bySize);
       var f = $('eventForm');
       if (!f.contains(document.activeElement)) {
         f.childName.value = data.event.childName;
@@ -37,6 +43,20 @@
       showDash();
       render();
     });
+  }
+
+  function renderSizes(bySize) {
+    var tbody = $('sizeRows');
+    tbody.textContent = '';
+    var sizes = Object.keys(bySize).map(Number).sort(function (a, b) { return a - b; });
+    sizes.forEach(function (n) {
+      var tr = document.createElement('tr');
+      tr.appendChild(cell(sizeLabel(n) + ' (' + n + ')'));
+      tr.appendChild(cell(bySize[n]));
+      tr.appendChild(cell(n * bySize[n]));
+      tbody.appendChild(tr);
+    });
+    $('sizeEmpty').hidden = sizes.length > 0;
   }
 
   function cell(text) { var td = document.createElement('td'); td.textContent = text; return td; }
@@ -54,7 +74,7 @@
       badge.textContent = LABELS[r.status];
       st.appendChild(badge);
       tr.appendChild(st);
-      tr.appendChild(cell(r.status === 'yes' ? r.people : '—'));
+      tr.appendChild(cell(r.status === 'yes' ? r.people + ' (' + sizeLabel(r.people) + ')' : '—'));
       tr.appendChild(cell(timeFmt.format(new Date(r.createdAt)) + (r.updatedAt ? ' (נערך)' : '')));
       var actions = document.createElement('td');
       actions.className = 'actions';
@@ -93,9 +113,14 @@
   $('editForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var status = $('editStatus').value;
+    var people = Number($('editPeople').value);
+    if (status === 'yes' && (!Number.isInteger(people) || people < 1 || people > 30)) {
+      $('editError').textContent = 'נא לכתוב מספר אנשים בין 1 ל־30';
+      return;
+    }
     api('/api/admin/responses/' + state.editing.id, {
       method: 'PUT',
-      body: JSON.stringify({ firstName: $('editName').value, status: status, people: status === 'yes' ? Number($('editPeople').value) : 0 })
+      body: JSON.stringify({ firstName: $('editName').value, status: status, people: status === 'yes' ? people : 0 })
     })
       .then(function () { $('editDialog').close(); return load(); })
       .catch(function (err) { $('editError').textContent = err.message; });
@@ -121,7 +146,7 @@
   $('loginForm').addEventListener('submit', function (e) {
     e.preventDefault();
     $('loginError').textContent = '';
-    api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: $('password').value }) })
+    api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: $('username').value, password: $('password').value }) })
       .then(function () { $('password').value = ''; return load(); })
       .catch(function (err) { $('loginError').textContent = err.message; });
   });

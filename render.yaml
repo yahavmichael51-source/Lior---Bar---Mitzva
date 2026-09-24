@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: ADMIN_USERNAME
+        sync: false
       - key: ADMIN_PASSWORD
         sync: false   # Render will ask you to type it when creating the service
       - key: SESSION_SECRET

@@ -9,6 +9,7 @@ const { chromium } = require('playwright');
 
 const PORT = 3456;
 const BASE = `http://localhost:${PORT}`;
+const USERNAME = 'avishay';
 const PASSWORD = 'test-password-123';
 
 async function waitForServer() {
@@ -19,13 +20,15 @@ async function waitForServer() {
   throw new Error('server did not start');
 }
 
-async function submitRsvp(page, name, statusLabel, peopleLabel) {
+async function submitRsvp(page, name, statusLabel, peopleLabel, otherCount) {
   await page.goto(BASE + '/');
   await page.fill('#firstName', name);
   await page.getByRole('radio', { name: statusLabel, exact: true }).check();
   const peopleVisible = await page.isVisible('#peopleField');
   assert.equal(peopleVisible, statusLabel === 'מגיע/ה', `people question visibility for ${statusLabel}`);
   if (peopleLabel) await page.getByRole('radio', { name: peopleLabel, exact: true }).check();
+  assert.equal(await page.isVisible('#otherCount'), peopleLabel === 'אחר', 'other-count field visibility');
+  if (otherCount !== undefined) await page.fill('#otherCount', String(otherCount));
   await page.click('#submitBtn');
   await page.waitForSelector('#thanksCard:not([hidden])');
   assert.match(await page.textContent('#thanksText'), /נשמרה/);
@@ -36,7 +39,7 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
   const entry = process.env.TEST_TARGET === 'netlify' ? 'test/netlify-sim.mjs' : 'server.js';
   const server = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', entry], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ADMIN_PASSWORD: PASSWORD, DATABASE_URL: process.env.TEST_DATABASE_URL || '' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ADMIN_USERNAME: USERNAME, ADMIN_PASSWORD: PASSWORD, DATABASE_URL: process.env.TEST_DATABASE_URL || '' },
     stdio: 'inherit',
   });
   const browser = await chromium.launch();
@@ -54,14 +57,32 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
     assert.equal(await page.textContent('#error'), 'נא לבחור כמה אנשים יגיעו');
 
     // Server rejects invalid payloads too.
-    let r = await fetch(BASE + '/api/rsvp', { method: 'POST', body: JSON.stringify({ firstName: 'x', status: 'yes', people: 7 }) });
-    assert.equal(r.status, 400);
+    let r;
+    for (const people of [0, 31, 2.5, 'abc']) {
+      r = await fetch(BASE + '/api/rsvp', { method: 'POST', body: JSON.stringify({ firstName: 'x', status: 'yes', people }) });
+      assert.equal(r.status, 400, `people=${people} must be rejected`);
+    }
+
+    // "Other" needs a valid number.
+    await page.goto(BASE + '/');
+    await page.fill('#firstName', 'בדיקה');
+    await page.getByRole('radio', { name: 'מגיע/ה', exact: true }).check();
+    await page.getByRole('radio', { name: 'אחר', exact: true }).check();
+    await page.click('#submitBtn');
+    assert.match(await page.textContent('#error'), /מספר בין 1 ל־30/);
+    await page.fill('#otherCount', '31');
+    await page.click('#submitBtn');
+    assert.match(await page.textContent('#error'), /מספר בין 1 ל־30/);
 
     await submitRsvp(page, 'דנה', 'מגיע/ה', 'רק אני');       // 1
     await submitRsvp(page, 'יוסי', 'מגיע/ה', 'אני + 1');     // 2
     await submitRsvp(page, 'רחל', 'מגיע/ה', 'אני + 2');      // 3
+    await submitRsvp(page, 'אבי', 'מגיע/ה', 'אני + 3');      // 4
+    await submitRsvp(page, 'נועה', 'מגיע/ה', 'אני + 4');     // 5
+    await submitRsvp(page, 'שרה', 'מגיע/ה', 'אחר', 7);       // 7
     await submitRsvp(page, 'משה', 'לא מגיע/ה');
     await submitRsvp(page, 'יוסי', 'עוד לא יודע/ת');         // same name: must stay a separate row
+    // Expected: 6 "coming" responses, 1+2+3+4+5+7 = 22 people, 16 companions.
 
     // Admin data is protected.
     r = await fetch(BASE + '/api/admin/responses');
@@ -72,19 +93,28 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
     const adminJs = await (await fetch(BASE + '/admin.js')).text();
     assert.ok(!adminHtml.includes(PASSWORD) && !adminJs.includes(PASSWORD), 'password must not reach the browser');
 
-    // Wrong password.
-    await page.goto(BASE + '/admin');
-    await page.fill('#password', 'wrong');
-    await page.click('#loginForm button');
-    await page.waitForFunction(() => document.getElementById('loginError').textContent === 'סיסמה שגויה');
-
-    // Login, then reload to prove persistence + session cookie.
-    await page.fill('#password', PASSWORD);
-    await page.click('#loginForm button');
+    // Corner login on the guest page: wrong username, wrong password, then correct.
+    await page.goto(BASE + '/');
+    const corner = await page.locator('#loginOpen').boundingBox();
+    assert.ok(corner.x < 60 && corner.y < 60, 'login button sits in the top-left corner');
+    await page.click('#loginOpen');
+    await page.fill('#loginUser', 'someone');
+    await page.fill('#loginPass', PASSWORD);
+    await page.click('#loginSubmit');
+    await page.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
+    await page.fill('#loginUser', USERNAME);
+    await page.fill('#loginPass', 'wrong');
+    await page.click('#loginSubmit');
+    await page.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
+    await page.fill('#loginPass', PASSWORD);
+    await page.click('#loginSubmit');
+    await page.waitForURL(BASE + '/admin');
     await page.waitForSelector('#dashView:not([hidden])');
+
+    // Reload to prove persistence + session cookie.
     await page.reload();
     await page.waitForSelector('#dashView:not([hidden])');
-    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 5);
+    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 8);
 
     const stats = async () => ({
       total: await page.textContent('#sTotal'),
@@ -92,11 +122,23 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
       no: await page.textContent('#sNo'),
       maybe: await page.textContent('#sMaybe'),
     });
-    assert.deepEqual(await stats(), { total: '6', yes: '3', no: '1', maybe: '1' });
+    assert.deepEqual(await stats(), { total: '22', yes: '6', no: '1', maybe: '1' });
+    assert.equal(await page.textContent('#sResponses'), '8');
+    assert.equal(await page.textContent('#sCompanions'), '16');
+    assert.equal(await page.textContent('#sTotal2'), '22');
+    const sizes = await page.$$eval('#sizeRows tr', (trs) => trs.map((tr) => [...tr.children].map((td) => td.textContent)));
+    assert.deepEqual(sizes, [
+      ['רק אני (1)', '1', '1'],
+      ['אני + 1 (2)', '1', '2'],
+      ['אני + 2 (3)', '1', '3'],
+      ['אני + 3 (4)', '1', '4'],
+      ['אני + 4 (5)', '1', '5'],
+      ['אני + 6 (7)', '1', '7'],
+    ]);
 
     // Filter.
     await page.selectOption('#filter', 'yes');
-    assert.equal(await page.locator('#rows tr').count(), 3);
+    assert.equal(await page.locator('#rows tr').count(), 6);
     await page.selectOption('#filter', 'maybe');
     assert.equal(await page.locator('#rows tr').count(), 1);
     assert.equal(await page.getAttribute('#csvLink', 'href'), '/api/admin/export.csv?status=maybe');
@@ -106,25 +148,27 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
     const csv = await page.evaluate(() => fetch('/api/admin/export.csv').then((x) => x.text()));
     const lines = csv.replace(/^﻿/, '').trim().split(/\r\n/);
     assert.equal(lines[0], 'שם פרטי,תשובה,מספר אנשים,שעת שליחה');
-    assert.equal(lines.length, 6);
+    assert.equal(lines.length, 9);
     assert.ok(lines.some((l) => l.startsWith('רחל,מגיע/ה,3,')));
+    assert.ok(lines.some((l) => l.startsWith('שרה,מגיע/ה,7,')));
     const csvYes = await page.evaluate(() => fetch('/api/admin/export.csv?status=yes').then((x) => x.text()));
-    assert.equal(csvYes.trim().split(/\r\n/).length, 4);
+    assert.equal(csvYes.trim().split(/\r\n/).length, 7);
 
     // Edit: change the "maybe" Yossi to coming with +1.
     const maybeRow = page.locator('#rows tr', { hasText: 'עוד לא יודע/ת' });
     await maybeRow.getByRole('button', { name: 'עריכה' }).click();
     await page.selectOption('#editStatus', 'yes');
-    await page.selectOption('#editPeople', '2');
+    await page.fill('#editPeople', '2');
     await page.click('#editForm button[type=submit]');
-    await page.waitForFunction(() => document.getElementById('sTotal').textContent === '8');
-    assert.deepEqual(await stats(), { total: '8', yes: '4', no: '1', maybe: '0' });
+    await page.waitForFunction(() => document.getElementById('sTotal').textContent === '24');
+    assert.deepEqual(await stats(), { total: '24', yes: '7', no: '1', maybe: '0' });
 
     // Delete Dana.
     page.once('dialog', (d) => d.accept());
     await page.locator('#rows tr', { hasText: 'דנה' }).getByRole('button', { name: 'מחיקה' }).click();
-    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 4);
-    assert.deepEqual(await stats(), { total: '7', yes: '3', no: '1', maybe: '0' });
+    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 7);
+    assert.deepEqual(await stats(), { total: '23', yes: '6', no: '1', maybe: '0' });
+    assert.equal(await page.textContent('#sCompanions'), '17');
 
     // Editable event details show up on the guest page.
     await page.click('details.settings summary');

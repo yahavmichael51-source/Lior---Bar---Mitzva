@@ -33,11 +33,22 @@
     return input ? input.value : null;
   }
 
+  var otherField = document.getElementById('otherField');
+  var otherCount = document.getElementById('otherCount');
+
   form.addEventListener('change', function (e) {
     if (e.target.name === 'status') {
       var coming = e.target.value === 'yes';
       peopleField.hidden = !coming;
-      if (!coming) form.querySelectorAll('input[name="people"]').forEach(function (i) { i.checked = false; });
+      if (!coming) {
+        form.querySelectorAll('input[name="people"]').forEach(function (i) { i.checked = false; });
+        otherField.hidden = true;
+        otherCount.value = '';
+      }
+    }
+    if (e.target.name === 'people') {
+      otherField.hidden = e.target.value !== 'other';
+      if (e.target.value === 'other') otherCount.focus();
     }
   });
 
@@ -53,6 +64,15 @@
     if (!firstName) { errorEl.textContent = 'נא לכתוב שם פרטי'; form.firstName.focus(); return; }
     if (!status) { errorEl.textContent = 'נא לבחור אחת מהתשובות'; return; }
     if (status === 'yes' && !people) { errorEl.textContent = 'נא לבחור כמה אנשים יגיעו'; return; }
+    if (status === 'yes' && people === 'other') {
+      var n = Number(otherCount.value);
+      if (!otherCount.value || !Number.isInteger(n) || n < 1 || n > 30) {
+        errorEl.textContent = 'נא לכתוב כמה אנשים יגיעו בסך הכול (מספר בין 1 ל־30)';
+        otherCount.focus();
+        return;
+      }
+      people = String(n);
+    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'שולח…';
@@ -91,6 +111,7 @@
   document.getElementById('againBtn').addEventListener('click', function () {
     form.reset();
     peopleField.hidden = true;
+    otherField.hidden = true;
     document.getElementById('thanksCard').hidden = true;
     document.getElementById('formCard').hidden = false;
     form.firstName.focus();

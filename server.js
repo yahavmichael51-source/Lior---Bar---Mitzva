@@ -57,9 +57,12 @@ function notFound(res) {
 
 async function main() {
   const db = await openDatabase();
+  const adminUsername = (process.env.ADMIN_USERNAME || '').trim();
   const adminPassword = process.env.ADMIN_PASSWORD || '';
-  if (!adminPassword) console.warn('WARNING: ADMIN_PASSWORD is not set — the admin page will refuse all logins.');
-  const handle = createApi(db, { adminPassword, sessionSecret: process.env.SESSION_SECRET });
+  if (!adminUsername || !adminPassword) {
+    console.warn('WARNING: ADMIN_USERNAME / ADMIN_PASSWORD are not set — the admin page will refuse all logins.');
+  }
+  const handle = createApi(db, { adminUsername, adminPassword, sessionSecret: process.env.SESSION_SECRET });
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
