@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node test/e2e.js"
+    "test": "node test/e2e.js && TEST_TARGET=netlify node test/e2e.js"
   },
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/yahavmichael51-source/Lior---Bar---Mitzva#readme",
   "dependencies": {
+    "@netlify/blobs": "^11.1.1",
     "pg": "^8.23.0"
   },
   "private": true,

@@ -33,7 +33,8 @@ async function submitRsvp(page, name, statusLabel, peopleLabel) {
 
 (async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsvp-test-'));
-  const server = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server.js'], {
+  const entry = process.env.TEST_TARGET === 'netlify' ? 'test/netlify-sim.mjs' : 'server.js';
+  const server = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', entry], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ADMIN_PASSWORD: PASSWORD, DATABASE_URL: process.env.TEST_DATABASE_URL || '' },
     stdio: 'inherit',

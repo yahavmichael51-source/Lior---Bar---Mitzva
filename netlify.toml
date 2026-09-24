@@ -1,0 +1,17 @@
+# Netlify: static pages from /public, API from netlify/functions/api.mjs, data in Netlify Blobs.
+[build]
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[headers]]
+  for = "/admin*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-cache"
