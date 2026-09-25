@@ -86,7 +86,7 @@
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>שם פרטי</th><th>תשובה</th><th>מספר אנשים</th><th>שעת שליחה</th><th></th></tr></thead>
+        <thead><tr><th>שם פרטי</th><th>שם משפחה</th><th>תשובה</th><th>מספר אנשים</th><th>שעת שליחה</th><th>עודכן</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="empty" id="empty" hidden>אין עדיין תשובות להצגה.</div>
@@ -99,6 +99,10 @@
       <div class="field">
         <label for="editName">שם פרטי</label>
         <input type="text" id="editName" maxlength="60" required />
+      </div>
+      <div class="field">
+        <label for="editLastName">שם משפחה</label>
+        <input type="text" id="editLastName" maxlength="60" />
       </div>
       <div class="field">
         <label for="editStatus">תשובה</label>

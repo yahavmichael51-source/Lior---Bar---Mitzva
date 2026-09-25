@@ -68,6 +68,7 @@
     list.forEach(function (r) {
       var tr = document.createElement('tr');
       tr.appendChild(cell(r.firstName));
+      tr.appendChild(cell(r.lastName || '—'));
       var st = document.createElement('td');
       var badge = document.createElement('span');
       badge.className = 'badge ' + r.status;
@@ -75,7 +76,8 @@
       st.appendChild(badge);
       tr.appendChild(st);
       tr.appendChild(cell(r.status === 'yes' ? r.people + ' (' + sizeLabel(r.people) + ')' : '—'));
-      tr.appendChild(cell(timeFmt.format(new Date(r.createdAt)) + (r.updatedAt ? ' (נערך)' : '')));
+      tr.appendChild(cell(timeFmt.format(new Date(r.createdAt))));
+      tr.appendChild(cell(r.updatedAt ? timeFmt.format(new Date(r.updatedAt)) : '—'));
       var actions = document.createElement('td');
       actions.className = 'actions';
       var edit = document.createElement('button');
@@ -96,6 +98,7 @@
   function openEdit(r) {
     state.editing = r;
     $('editName').value = r.firstName;
+    $('editLastName').value = r.lastName || '';
     $('editStatus').value = r.status;
     $('editPeople').value = String(r.people || 1);
     $('editPeopleField').hidden = r.status !== 'yes';
@@ -104,7 +107,7 @@
   }
 
   function remove(r) {
-    if (!confirm('למחוק את התשובה של ' + r.firstName + '?')) return;
+    if (!confirm('למחוק את התשובה של ' + (r.firstName + ' ' + (r.lastName || '')).trim() + '?')) return;
     api('/api/admin/responses/' + r.id, { method: 'DELETE' }).then(load).catch(function (e) { alert(e.message); });
   }
 
@@ -120,7 +123,7 @@
     }
     api('/api/admin/responses/' + state.editing.id, {
       method: 'PUT',
-      body: JSON.stringify({ firstName: $('editName').value, status: status, people: status === 'yes' ? people : 0 })
+      body: JSON.stringify({ firstName: $('editName').value, lastName: $('editLastName').value, status: status, people: status === 'yes' ? people : 0 })
     })
       .then(function () { $('editDialog').close(); return load(); })
       .catch(function (err) { $('editError').textContent = err.message; });

@@ -77,7 +77,7 @@ async function main() {
           method: req.method,
           pathname: url.pathname,
           searchParams: url.searchParams,
-          headers: { cookie: req.headers.cookie || '' },
+          headers: { cookie: req.headers.cookie || '', editToken: req.headers['x-edit-token'] || '' },
           body: hasBody ? await readBody(req) : '',
           ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress,
           secure: !!req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https',

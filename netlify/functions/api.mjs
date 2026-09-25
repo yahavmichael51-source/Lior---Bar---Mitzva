@@ -8,11 +8,17 @@ const { createBlobsStore } = storeModule;
 
 let handle;
 
+// Netlify's recommended way to read environment variables in functions is Netlify.env;
+// process.env is the fallback for the local test simulation.
+function env(key) {
+  return globalThis.Netlify?.env?.get(key) ?? process.env[key];
+}
+
 export default async (request, context) => {
   handle ??= createApi(createBlobsStore(getStore({ name: 'rsvp', consistency: 'strong' })), {
-    adminUsername: (process.env.ADMIN_USERNAME || '').trim(),
-    adminPassword: process.env.ADMIN_PASSWORD || '',
-    sessionSecret: process.env.SESSION_SECRET,
+    adminUsername: (env('ADMIN_USERNAME') || '').trim(),
+    adminPassword: env('ADMIN_PASSWORD') || '',
+    sessionSecret: env('SESSION_SECRET'),
   });
   const url = new URL(request.url);
   const body = request.method === 'GET' || request.method === 'HEAD' ? '' : await request.text();
@@ -20,7 +26,7 @@ export default async (request, context) => {
     method: request.method,
     pathname: url.pathname,
     searchParams: url.searchParams,
-    headers: { cookie: request.headers.get('cookie') || '' },
+    headers: { cookie: request.headers.get('cookie') || '', editToken: request.headers.get('x-edit-token') || '' },
     body: body.length > MAX_BODY ? body.slice(0, MAX_BODY + 1) : body,
     ip: context.ip || 'unknown',
     secure: url.protocol === 'https:',

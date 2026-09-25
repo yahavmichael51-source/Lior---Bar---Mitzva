@@ -44,11 +44,26 @@
       <div class="meta" id="meta"></div>
     </header>
 
+    <section class="card mine" id="mineCard" hidden>
+      <h2>התשובות שנשלחו מהטלפון הזה</h2>
+      <p class="note">שיניתם את דעתכם? אפשר לעדכן את התשובה בכל רגע.</p>
+      <ul class="mine-list" id="mineList"></ul>
+      <button type="button" class="btn" id="newForOther">שליחת תשובה עבור מישהו אחר</button>
+    </section>
+
     <section class="card" id="formCard">
+      <div class="editing-banner" id="editingBanner" hidden>
+        <span id="editingText">עדכון התשובה</span>
+        <button type="button" class="btn small" id="cancelEdit">ביטול</button>
+      </div>
       <form id="rsvpForm" novalidate>
         <div class="field">
           <label for="firstName">שם פרטי <span class="req" aria-hidden="true">*</span></label>
           <input type="text" id="firstName" name="firstName" autocomplete="given-name" maxlength="60" required placeholder="איך קוראים לך?" />
+        </div>
+        <div class="field">
+          <label for="lastName">שם משפחה <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="lastName" name="lastName" autocomplete="family-name" maxlength="60" required />
         </div>
 
         <fieldset class="field">
@@ -87,7 +102,11 @@
       </div>
       <h2 id="thanksTitle">תודה רבה!</h2>
       <p id="thanksText">התשובה שלך נשמרה.</p>
-      <button type="button" class="btn" id="againBtn">שליחת תשובה נוספת</button>
+      <p class="note">אם תשנו את דעתכם, פשוט פתחו שוב את הקישור מהטלפון הזה ותוכלו לעדכן את התשובה.</p>
+      <div class="stack">
+        <button type="button" class="btn primary" id="changeBtn">שינוי התשובה</button>
+        <button type="button" class="btn" id="againBtn">שליחת תשובה עבור מישהו אחר</button>
+      </div>
     </section>
   </main>
   <script src="/login.js"></script>
