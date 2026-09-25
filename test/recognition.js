@@ -41,10 +41,12 @@ async function answer(page, first, last, statusLabel, peopleLabel) {
   const newPhone = async () => (await browser.newContext(PHONE)).newPage();
   const adminRows = async () => {
     const admin = await newPhone();
-    await admin.goto(BASE + '/admin');
-    await admin.fill('#username', 'sarit');
-    await admin.fill('#password', 'pw');
-    await admin.click('#loginForm button');
+    await admin.goto(BASE + '/?admin');
+    await admin.waitForSelector('#loginDialog[open]');
+    await admin.fill('#loginUser', 'sarit');
+    await admin.fill('#loginPass', 'pw');
+    await admin.click('#loginSubmit');
+    await admin.waitForURL(BASE + '/admin');
     await admin.waitForSelector('#dashView:not([hidden])');
     const data = await admin.evaluate(() => fetch('/api/admin/responses').then((r) => r.json()));
     return { admin, data };
@@ -78,9 +80,10 @@ async function answer(page, first, last, statusLabel, peopleLabel) {
 
     const phoneB = await newPhone();
     await phoneB.goto(BASE + '/');
-    await check('Different phone, same name: she is asked "is that you?" and shown her earlier answer', async () => {
+    await check('Different phone, same name: she is asked "is that you?" (her earlier answer is not shown to others)', async () => {
       assert.equal(await answer(phoneB, 'דנה', 'לוי', 'לא מגיע/ה'), 'asked');
-      assert.match(await phoneB.textContent('#matchText'), /דנה לוי: מגיע\/ה · 2 אנשים/);
+      assert.match(await phoneB.textContent('#matchText'), /דנה לוי/);
+      assert.doesNotMatch(await phoneB.textContent('#matchText'), /מגיע/);
     });
 
     await check('"Yes, that\'s me" updates her existing answer — still one row for Dana', async () => {

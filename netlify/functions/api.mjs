@@ -6,20 +6,26 @@ import storeModule from '../../lib/blobs-store.js';
 const { createApi, MAX_BODY } = apiModule;
 const { createBlobsStore } = storeModule;
 
-let handle;
-
 // Netlify's recommended way to read environment variables in functions is Netlify.env;
 // process.env is the fallback for the local test simulation.
 function env(key) {
   return globalThis.Netlify?.env?.get(key) ?? process.env[key];
 }
 
+function adminAccounts() {
+  return [
+    { username: env('ADMIN_USERNAME'), password: env('ADMIN_PASSWORD') },
+    { username: env('ADMIN_USERNAME_2'), password: env('ADMIN_PASSWORD_2') },
+  ];
+}
+
 export default async (request, context) => {
-  handle ??= createApi(createBlobsStore(getStore({ name: 'rsvp', consistency: 'strong' })), {
-    adminUsername: (env('ADMIN_USERNAME') || '').trim(),
-    adminPassword: env('ADMIN_PASSWORD') || '',
-    sessionSecret: env('SESSION_SECRET'),
-  });
+  // Created per request (not cached): the Blobs connection details belong to this invocation.
+  const db = createBlobsStore(
+    getStore({ name: 'rsvp', consistency: 'strong' }),
+    getStore({ name: 'rsvp' })
+  );
+  const handle = createApi(db, { admins: adminAccounts(), sessionSecret: env('SESSION_SECRET') });
   const url = new URL(request.url);
   const body = request.method === 'GET' || request.method === 'HEAD' ? '' : await request.text();
   const res = await handle({

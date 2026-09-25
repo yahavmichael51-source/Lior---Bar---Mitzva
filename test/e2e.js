@@ -11,6 +11,8 @@ const PORT = 3456;
 const BASE = `http://localhost:${PORT}`;
 const USERNAME = 'avishay';
 const PASSWORD = 'test-password-123';
+const USERNAME_2 = 'partner';
+const PASSWORD_2 = 'second-pass-456';
 
 async function waitForServer() {
   for (let i = 0; i < 50; i++) {
@@ -52,7 +54,7 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
   const entry = process.env.TEST_TARGET === 'netlify' ? 'test/netlify-sim.mjs' : 'server.js';
   const server = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', entry], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ADMIN_USERNAME: USERNAME, ADMIN_PASSWORD: PASSWORD, DATABASE_URL: process.env.TEST_DATABASE_URL || '' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ADMIN_USERNAME: USERNAME, ADMIN_PASSWORD: PASSWORD, ADMIN_USERNAME_2: USERNAME_2, ADMIN_PASSWORD_2: PASSWORD_2, DATABASE_URL: process.env.TEST_DATABASE_URL || '' },
     stdio: 'inherit',
   });
   const browser = await chromium.launch();
@@ -177,7 +179,8 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     await phone2.getByRole('radio', { name: 'אני + 2', exact: true }).check();
     await phone2.click('#submitBtn');
     await phone2.waitForSelector('#matchCard:not([hidden])');
-    assert.match(await phone2.textContent('#matchText'), /לא מגיע\/ה/, 'shows the earlier answer');
+    assert.match(await phone2.textContent('#matchText'), /עידו שלום/);
+    assert.doesNotMatch(await phone2.textContent('#matchText'), /מגיע/, "someone else's answer is not revealed");
     await phone2.click('#matchMe');
     await phone2.waitForSelector('#thanksCard:not([hidden])');
     await phone2.goto(BASE + '/');
@@ -198,10 +201,20 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     const adminJs = await (await fetch(BASE + '/admin.js')).text();
     assert.ok(!adminHtml.includes(PASSWORD) && !adminJs.includes(PASSWORD), 'password must not reach the browser');
 
-    // Corner login on the guest page: wrong username, wrong password, then correct.
+    // Guests never see the login button, and /admin has no login page of its own.
     await page.goto(BASE + '/');
+    await page.waitForTimeout(200);
+    assert.ok(await page.isHidden('#loginOpen'), 'guests do not see the login button');
+    await page.goto(BASE + '/admin');
+    await page.waitForURL(BASE + '/'); // "/admin" → "/?admin" → address bar tidied to "/"
+    await page.waitForSelector('#loginDialog[open]');
+    assert.equal(await page.locator('text=כניסת מנהל').count(), 0, 'no separate admin login page');
+    // The login button now shows on this device, in the top-left corner.
+    await page.click('#loginCancel');
     const corner = await page.locator('#loginOpen').boundingBox();
     assert.ok(corner.x < 60 && corner.y < 60, 'login button sits in the top-left corner');
+    await page.reload();
+    assert.ok(await page.isVisible('#loginOpen'), 'device stays marked as an organizer device');
     await page.click('#loginOpen');
     await page.fill('#loginUser', 'someone');
     await page.fill('#loginPass', PASSWORD);
@@ -294,12 +307,59 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     await page.waitForFunction(() => document.getElementById('meta').textContent.includes('אולמי הגן'));
     assert.match(await page.textContent('h1'), /ליאור/);
 
-    // Logout blocks access again.
+    // Logout blocks access again and returns to the guest page.
     await page.goto(BASE + '/admin');
     await page.waitForSelector('#dashView:not([hidden])');
     await page.click('#logoutBtn');
-    await page.waitForSelector('#loginView:not([hidden])');
+    await page.waitForURL(BASE + '/');
     assert.equal(await page.evaluate(() => fetch('/api/admin/responses').then((x) => x.status)), 401);
+
+    // The second organizer account works too (and only these two accounts exist).
+    const second = await (await browser.newContext(PHONE)).newPage();
+    await second.goto(BASE + '/?admin');
+    await second.waitForSelector('#loginDialog[open]');
+    await second.fill('#loginUser', USERNAME_2);
+    await second.fill('#loginPass', PASSWORD);
+    await second.click('#loginSubmit');
+    await second.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
+    await second.fill('#loginPass', PASSWORD_2);
+    await second.click('#loginSubmit');
+    await second.waitForURL(BASE + '/admin');
+    await second.waitForSelector('#dashView:not([hidden])');
+    assert.equal(await second.locator('#rows tr').count(), 8);
+
+    // Forged or tampered session cookies are rejected.
+    for (const cookie of ['admin_session=9999999999999.YWRtaW4.abc', 'admin_session=' + 'x'.repeat(40)]) {
+      r = await fetch(BASE + '/api/admin/responses', { headers: { cookie } });
+      assert.equal(r.status, 401, 'forged cookie rejected');
+    }
+    const [real] = (await second.context().cookies()).filter((c) => c.name === 'admin_session');
+    const [exp, user, sig] = real.value.split('.');
+    const otherUser = Buffer.from(USERNAME, 'utf8').toString('base64url');
+    r = await fetch(BASE + '/api/admin/responses', { headers: { cookie: `admin_session=${exp}.${otherUser}.${sig}` } });
+    assert.equal(r.status, 401, 'cannot swap the username inside a cookie');
+    r = await fetch(BASE + '/api/admin/responses', { headers: { cookie: `admin_session=${real.value}` } });
+    assert.equal(r.status, 200, 'the real cookie works');
+
+    // Security headers on pages.
+    const head = await fetch(BASE + '/');
+    assert.match(head.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
+    assert.equal(head.headers.get('x-frame-options'), 'DENY');
+
+    // Login brute force is cut off after a few wrong tries.
+    let status;
+    for (let i = 0; i < 12; i++) {
+      status = (await fetch(BASE + '/api/admin/login', { method: 'POST', body: JSON.stringify({ username: USERNAME, password: 'guess' + i }) })).status;
+    }
+    assert.equal(status, 429, 'too many wrong passwords are blocked');
+    status = (await fetch(BASE + '/api/admin/login', { method: 'POST', body: JSON.stringify({ username: USERNAME, password: PASSWORD }) })).status;
+    assert.equal(status, 429, 'even the right password waits out the block');
+
+    // Flooding the form with answers is cut off too.
+    for (let i = 0; i < 45; i++) {
+      status = (await fetch(BASE + '/api/rsvp', { method: 'POST', body: JSON.stringify({ firstName: 'ספאם' + i, lastName: 'בוט', status: 'no' }) })).status;
+    }
+    assert.equal(status, 429, 'answer flooding is blocked');
 
     console.log('All end-to-end checks passed ✓');
   } finally {

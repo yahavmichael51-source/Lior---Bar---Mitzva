@@ -45,6 +45,9 @@ function serveStatic(res, pathname) {
       'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
       'Cache-Control': path.extname(file) === '.html' ? 'no-cache' : 'public, max-age=300',
       'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'same-origin',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
     });
     res.end(data);
   });
@@ -57,12 +60,14 @@ function notFound(res) {
 
 async function main() {
   const db = await openDatabase();
-  const adminUsername = (process.env.ADMIN_USERNAME || '').trim();
-  const adminPassword = process.env.ADMIN_PASSWORD || '';
-  if (!adminUsername || !adminPassword) {
+  const admins = [
+    { username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD },
+    { username: process.env.ADMIN_USERNAME_2, password: process.env.ADMIN_PASSWORD_2 },
+  ];
+  if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
     console.warn('WARNING: ADMIN_USERNAME / ADMIN_PASSWORD are not set — the admin page will refuse all logins.');
   }
-  const handle = createApi(db, { adminUsername, adminPassword, sessionSecret: process.env.SESSION_SECRET });
+  const handle = createApi(db, { admins, sessionSecret: process.env.SESSION_SECRET });
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');

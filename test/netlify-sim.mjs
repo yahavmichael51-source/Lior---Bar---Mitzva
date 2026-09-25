@@ -15,10 +15,17 @@ const blobs = new BlobsServer({ directory: process.env.DATA_DIR, port: BLOBS_POR
 await blobs.start();
 const edgeURL = `http://localhost:${BLOBS_PORT}`;
 process.env.NETLIFY_BLOBS_CONTEXT = Buffer.from(
-  JSON.stringify({ siteID: 'local-site', token, edgeURL, uncachedEdgeURL: edgeURL })
+  // SIM_NO_STRONG=1 simulates an environment without strong-consistency support.
+  JSON.stringify({ siteID: 'local-site', token, edgeURL, ...(process.env.SIM_NO_STRONG ? {} : { uncachedEdgeURL: edgeURL }) })
 ).toString('base64');
 
 const { default: fn } = await import('../netlify/functions/api.mjs');
+// Apply the "/*" headers from netlify.toml, like Netlify does for static pages.
+const toml = fs.readFileSync(path.join(root, 'netlify.toml'), 'utf8');
+const block = toml.split('[[headers]]').find((b) => /for\s*=\s*"\/\*"/.test(b)) || '';
+const pageHeaders = Object.fromEntries(
+  [...block.matchAll(/^\s*([A-Za-z-]+)\s*=\s*"(.*)"\s*$/gm)].filter(([, k]) => k !== 'for').map(([, k, v]) => [k, v])
+);
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript' };
 
 http
@@ -41,7 +48,7 @@ http
     let p = url.pathname === '/' ? '/index.html' : url.pathname === '/admin' ? '/admin.html' : url.pathname;
     fs.readFile(path.join(root, 'public', path.normalize(p)), (err, data) => {
       if (err) { res.writeHead(404); return res.end(); }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream' });
+      res.writeHead(200, { ...pageHeaders, 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream' });
       res.end(data);
     });
   })

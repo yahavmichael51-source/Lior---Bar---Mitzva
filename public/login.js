@@ -1,16 +1,37 @@
-// Corner "כניסה" button on the guest page: opens a username/password dialog and,
-// on success, goes to the statistics page (/admin). Credentials are checked only on the server.
+// Organizer login on the guest page. Guests don't see the "כניסה" button: it appears only on a
+// device that opened the site once with "?admin" at the end of the link (or already logged in).
+// Credentials are checked only on the server.
 (function () {
+  var FLAG = 'rsvp-admin-device';
+  var openBtn = document.getElementById('loginOpen');
   var dialog = document.getElementById('loginDialog');
   var form = document.getElementById('loginForm');
   var errorEl = document.getElementById('loginError');
   var submit = document.getElementById('loginSubmit');
 
-  document.getElementById('loginOpen').addEventListener('click', function () {
+  function flagged() {
+    try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; }
+  }
+  function flag() {
+    try { localStorage.setItem(FLAG, '1'); } catch (e) {}
+  }
+
+  function open() {
     errorEl.textContent = '';
     dialog.showModal();
     document.getElementById('loginUser').focus();
-  });
+  }
+
+  var askedForLogin = /(?:^|[?&])admin(?:=|&|$)/.test(window.location.search.slice(1));
+  if (askedForLogin) {
+    flag();
+    // Tidy the address bar so "?admin" isn't copied along if the link is shared.
+    try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  }
+  openBtn.hidden = !(askedForLogin || flagged());
+  openBtn.addEventListener('click', open);
+  if (askedForLogin) open();
+
   document.getElementById('loginCancel').addEventListener('click', function () { dialog.close(); });
   form.addEventListener('input', function () { errorEl.textContent = ''; });
 
@@ -25,6 +46,7 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, body: b }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error(res.body.error || 'הכניסה נכשלה');
+        flag();
         window.location.href = '/admin';
       })
       .catch(function (err) {

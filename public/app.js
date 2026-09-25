@@ -259,8 +259,8 @@
   function askIfSamePerson(payload, match) {
     pending = { payload: payload, match: match };
     $('matchText').textContent =
-      'ב־' + dateFmt.format(new Date(match.createdAt)) + ' נשלחה תשובה בשם ' +
-      (match.firstName + ' ' + match.lastName).trim() + ': ' + describe(match) + '.';
+      'ב־' + dateFmt.format(new Date(match.createdAt)) + ' כבר נשלחה תשובה בשם ' +
+      (match.firstName + ' ' + match.lastName).trim() + '.';
     $('matchError').textContent = '';
     show('match');
   }

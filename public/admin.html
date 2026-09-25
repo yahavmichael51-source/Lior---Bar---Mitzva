@@ -13,24 +13,6 @@
   <meta name="theme-color" content="#1f2a5c" />
 </head>
 <body>
-  <main class="wrap" id="loginView" hidden>
-    <header class="hero"><h1>כניסת מנהל</h1></header>
-    <section class="card">
-      <form id="loginForm">
-        <div class="field">
-          <label for="username">שם משתמש</label>
-          <input type="text" id="username" autocomplete="username" autocapitalize="off" spellcheck="false" required />
-        </div>
-        <div class="field">
-          <label for="password">סיסמה</label>
-          <input type="password" id="password" autocomplete="current-password" required />
-        </div>
-        <p class="error" id="loginError" role="alert"></p>
-        <button class="btn primary big" type="submit">כניסה</button>
-      </form>
-    </section>
-  </main>
-
   <main class="wrap wide" id="dashView" hidden>
     <div class="topbar">
       <h1>סטטיסטיקה ונתונים</h1>
@@ -40,6 +22,8 @@
         <button class="btn small" id="logoutBtn" type="button">יציאה</button>
       </div>
     </div>
+
+    <p class="error load-error" id="loadError" role="alert"></p>
 
     <section class="stats">
       <div class="stat total"><div class="num" id="sTotal">0</div><div class="lbl">צפויים להגיע (כולל מלווים)</div></div>

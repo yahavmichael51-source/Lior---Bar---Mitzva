@@ -12,15 +12,16 @@
     if (opts.body) opts.headers = { 'Content-Type': 'application/json' };
     return fetch(url, opts).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (body) {
-        if (r.status === 401 && url.indexOf('/login') === -1) { showLogin(); throw new Error('נדרשת התחברות'); }
+        if (r.status === 401) { goToLogin(); throw new Error('נדרשת התחברות'); }
         if (!r.ok) throw new Error(body.error || 'אירעה שגיאה');
         return body;
       });
     });
   }
 
-  function showLogin() { $('dashView').hidden = true; $('loginView').hidden = false; $('username').focus(); }
-  function showDash() { $('loginView').hidden = true; $('dashView').hidden = false; }
+  // Not logged in: go to the guest page, which opens the login window (there is no separate login page).
+  function goToLogin() { window.location.replace('/?admin'); }
+  function showDash() { $('dashView').hidden = false; }
 
   function load() {
     return api('/api/admin/responses').then(function (data) {
@@ -42,6 +43,7 @@
         f.eventLocation.value = data.event.eventLocation;
       }
       showDash();
+      $('loadError').textContent = '';
       render();
     });
   }
@@ -150,7 +152,7 @@
   $('filter').addEventListener('change', function () { state.filter = this.value; render(); });
   $('refreshBtn').addEventListener('click', function () { load().catch(function () {}); });
   $('logoutBtn').addEventListener('click', function () {
-    api('/api/admin/logout', { method: 'POST' }).finally(showLogin);
+    api('/api/admin/logout', { method: 'POST' }).finally(function () { window.location.replace('/'); });
   });
 
   $('eventForm').addEventListener('submit', function (e) {
@@ -164,16 +166,16 @@
       .catch(function (err) { $('eventSaved').textContent = err.message; });
   });
 
-  $('loginForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    $('loginError').textContent = '';
-    api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: $('username').value, password: $('password').value }) })
-      .then(function () { $('password').value = ''; return load(); })
-      .catch(function (err) { $('loginError').textContent = err.message; });
-  });
-
   // Keep the numbers fresh while the page is open.
   setInterval(function () { if (!$('dashView').hidden && !$('editDialog').open) load().catch(function () {}); }, 30000);
 
-  load().catch(showLogin);
+  load()
+    .then(function () {
+      try { localStorage.setItem('rsvp-admin-device', '1'); } catch (e) {}
+    })
+    .catch(function (err) {
+      if (err.message === 'נדרשת התחברות') return;
+      showDash();
+      $('loadError').textContent = err.message;
+    });
 })();
