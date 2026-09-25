@@ -236,6 +236,9 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     const edited = await page.locator('#rows tr', { hasText: 'עידו' }).textContent();
     assert.match(edited, /שלום/);
     assert.match(edited, /3 \(אני \+ 2\)/);
+    // Ido changed his answer 5 times; the latest earlier answer is listed first.
+    assert.equal(await page.locator('#rows tr', { hasText: 'עידו' }).locator('.prev').count(), 5);
+    assert.match(await page.locator('#rows tr', { hasText: 'עידו' }).locator('.prev').first().textContent(), /^קודם: לא מגיע\/ה/);
     const sizes = await page.$$eval('#sizeRows tr', (trs) => trs.map((tr) => [...tr.children].map((td) => td.textContent)));
     assert.deepEqual(sizes, [
       ['רק אני (1)', '1', '1'],
@@ -257,7 +260,7 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     // CSV export (using the logged-in browser session).
     const csv = await page.evaluate(() => fetch('/api/admin/export.csv').then((x) => x.text()));
     const lines = csv.replace(/^﻿/, '').trim().split(/\r\n/);
-    assert.equal(lines[0], 'שם פרטי,שם משפחה,תשובה,מספר אנשים,שעת שליחה,עודכן לאחרונה');
+    assert.equal(lines[0], 'שם פרטי,שם משפחה,תשובה,מספר אנשים,שעת שליחה,עודכן לאחרונה,תשובות קודמות');
     assert.equal(lines.length, 10);
     assert.ok(lines.some((l) => l.startsWith('רחל,מזרחי,מגיע/ה,3,')));
     assert.ok(lines.some((l) => l.startsWith('שרה,אברהם,מגיע/ה,7,')));
@@ -266,7 +269,7 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     assert.equal(csvYes.trim().split(/\r\n/).length, 8);
 
     // Edit: change the "maybe" Yossi to coming with +1.
-    const maybeRow = page.locator('#rows tr', { hasText: 'עוד לא יודע/ת' });
+    const maybeRow = page.locator('#rows tr', { has: page.locator('.badge.maybe') });
     await maybeRow.getByRole('button', { name: 'עריכה' }).click();
     await page.selectOption('#editStatus', 'yes');
     await page.fill('#editPeople', '2');

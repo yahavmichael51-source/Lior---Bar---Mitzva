@@ -33,6 +33,7 @@
       $('sYes2').textContent = data.summary.yes;
       $('sCompanions').textContent = data.summary.companions;
       $('sTotal2').textContent = data.summary.totalPeople;
+      $('sChanged').textContent = data.summary.changed;
       renderSizes(data.summary.bySize);
       var f = $('eventForm');
       if (!f.contains(document.activeElement)) {
@@ -59,10 +60,17 @@
     $('sizeEmpty').hidden = sizes.length > 0;
   }
 
+  function describeAnswer(r) {
+    return r.status === 'yes' ? LABELS.yes + ' (' + r.people + ')' : LABELS[r.status];
+  }
+
   function cell(text) { var td = document.createElement('td'); td.textContent = text; return td; }
 
   function render() {
-    var list = state.responses.filter(function (r) { return !state.filter || r.status === state.filter; });
+    var list = state.responses.filter(function (r) {
+      if (state.filter === 'changed') return r.history && r.history.length > 0;
+      return !state.filter || r.status === state.filter;
+    });
     var tbody = $('rows');
     tbody.textContent = '';
     list.forEach(function (r) {
@@ -74,7 +82,17 @@
       badge.className = 'badge ' + r.status;
       badge.textContent = LABELS[r.status];
       st.appendChild(badge);
+      st.className = 'answer';
+      // Earlier answers, most recent first, so the organizer sees what changed.
+      (r.history || []).slice().reverse().forEach(function (h) {
+        var prev = document.createElement('div');
+        prev.className = 'prev';
+        prev.textContent = 'קודם: ' + describeAnswer(h) + ' · שונה ב־' + timeFmt.format(new Date(h.changedAt)) +
+          (h.changedBy === 'admin' ? ' (על ידי המנהל)' : '');
+        st.appendChild(prev);
+      });
       tr.appendChild(st);
+      if (r.history && r.history.length) tr.className = 'changed';
       tr.appendChild(cell(r.status === 'yes' ? r.people + ' (' + sizeLabel(r.people) + ')' : '—'));
       tr.appendChild(cell(timeFmt.format(new Date(r.createdAt))));
       tr.appendChild(cell(r.updatedAt ? timeFmt.format(new Date(r.updatedAt)) : '—'));

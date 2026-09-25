@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node test/e2e.js && TEST_TARGET=netlify node test/e2e.js"
+    "test": "node test/e2e.js && TEST_TARGET=netlify node test/e2e.js && node test/recognition.js && TEST_TARGET=netlify node test/recognition.js"
   },
   "repository": {
     "type": "git",

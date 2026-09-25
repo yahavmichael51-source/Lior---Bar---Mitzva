@@ -222,3 +222,8 @@ table.mini th, table.mini td { padding: 8px 10px; }
 .match h2 { margin: 0 0 8px; color: var(--navy); font-size: 22px; }
 .match p { margin: 0 0 12px; }
 .match .error { margin: 12px 0 0; }
+
+/* ---------- admin: answer history ---------- */
+td.answer { white-space: normal; min-width: 180px; }
+td.answer .prev { margin-top: 4px; font-size: 14px; line-height: 1.35; color: var(--muted); }
+tr.changed > td { background: #fffaf0; }
