@@ -45,7 +45,7 @@
 ```bash
 npm install
 ADMIN_USERNAME=avishay ADMIN_PASSWORD=הסיסמה-שלי npm start
-# ואז לפתוח את http://localhost:3000 ואת http://localhost:3000/admin
+# ואז לפתוח את http://localhost:3000 ואת http://localhost:3000/nihul-lior
 ```
 
 > באירוח חינמי של Render השרת ״נרדם״ אחרי זמן בלי כניסות, והדיסק נמחק בכל הפעלה מחדש. לכן Netlify עדיף לאתר הזה.
