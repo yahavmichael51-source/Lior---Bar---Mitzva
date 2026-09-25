@@ -13,11 +13,29 @@
   <meta name="theme-color" content="#1f2a5c" />
 </head>
 <body>
+  <main class="wrap" id="loginView" hidden>
+    <header class="hero"><h1>דף ניהול</h1></header>
+    <section class="card">
+      <form id="loginForm">
+        <div class="field">
+          <label for="username">שם משתמש</label>
+          <input type="text" id="username" autocomplete="username" autocapitalize="off" spellcheck="false" required />
+        </div>
+        <div class="field">
+          <label for="password">סיסמה</label>
+          <input type="password" id="password" autocomplete="current-password" required />
+        </div>
+        <p class="error" id="loginError" role="alert"></p>
+        <button class="btn primary big" type="submit" id="loginSubmit">כניסה</button>
+      </form>
+    </section>
+  </main>
+
   <main class="wrap wide" id="dashView" hidden>
     <div class="topbar">
       <h1>סטטיסטיקה ונתונים</h1>
       <div class="row">
-        <a class="btn small" href="/">לאתר</a>
+        <a class="btn small" href="/" target="_blank" rel="noopener">לאתר האורחים</a>
         <button class="btn small" id="refreshBtn" type="button">רענון</button>
         <button class="btn small" id="logoutBtn" type="button">יציאה</button>
       </div>

@@ -11,6 +11,7 @@ const PORT = 3456;
 const BASE = `http://localhost:${PORT}`;
 const USERNAME = 'avishay';
 const PASSWORD = 'test-password-123';
+const ADMIN_PATH = '/nihul-lior';
 const USERNAME_2 = 'partner';
 const PASSWORD_2 = 'second-pass-456';
 
@@ -197,37 +198,36 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     assert.equal(r.status, 401);
     r = await fetch(BASE + '/api/admin/export.csv');
     assert.equal(r.status, 401);
-    const adminHtml = await (await fetch(BASE + '/admin')).text();
+    const adminHtml = await (await fetch(BASE + ADMIN_PATH)).text();
+    assert.match(adminHtml, /דף ניהול/);
     const adminJs = await (await fetch(BASE + '/admin.js')).text();
     assert.ok(!adminHtml.includes(PASSWORD) && !adminJs.includes(PASSWORD), 'password must not reach the browser');
 
-    // Guests never see the login button, and /admin has no login page of its own.
+    // The guest page has no login at all; the organizer page lives only at its own separate link.
     await page.goto(BASE + '/');
     await page.waitForTimeout(200);
-    assert.ok(await page.isHidden('#loginOpen'), 'guests do not see the login button');
-    await page.goto(BASE + '/admin');
-    await page.waitForURL(BASE + '/'); // "/admin" → "/?admin" → address bar tidied to "/"
-    await page.waitForSelector('#loginDialog[open]');
-    assert.equal(await page.locator('text=כניסת מנהל').count(), 0, 'no separate admin login page');
-    // The login button now shows on this device, in the top-left corner.
-    await page.click('#loginCancel');
-    const corner = await page.locator('#loginOpen').boundingBox();
-    assert.ok(corner.x < 60 && corner.y < 60, 'login button sits in the top-left corner');
-    await page.reload();
-    assert.ok(await page.isVisible('#loginOpen'), 'device stays marked as an organizer device');
-    await page.click('#loginOpen');
-    await page.fill('#loginUser', 'someone');
-    await page.fill('#loginPass', PASSWORD);
+    assert.equal(await page.locator('text=כניסה').count(), 0, 'no login button on the guest page');
+    assert.equal(await page.locator('input[type=password]').count(), 0, 'no password field on the guest page');
+    const guestHtml = await (await fetch(BASE + '/')).text();
+    assert.ok(!guestHtml.includes('nihul-lior'), 'the guest page does not link to the organizer page');
+    assert.equal((await fetch(BASE + '/admin')).status, 404, 'the old /admin address is gone');
+
+    // Organizer link: login screen first. Wrong username, wrong password, then correct.
+    await page.goto(BASE + ADMIN_PATH);
+    await page.waitForSelector('#loginView:not([hidden])');
+    assert.ok(await page.isHidden('#dashView'));
+    await page.fill('#username', 'someone');
+    await page.fill('#password', PASSWORD);
     await page.click('#loginSubmit');
     await page.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
-    await page.fill('#loginUser', USERNAME);
-    await page.fill('#loginPass', 'wrong');
+    await page.fill('#username', USERNAME);
+    await page.fill('#password', 'wrong');
     await page.click('#loginSubmit');
     await page.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
-    await page.fill('#loginPass', PASSWORD);
+    await page.fill('#password', PASSWORD);
     await page.click('#loginSubmit');
-    await page.waitForURL(BASE + '/admin');
     await page.waitForSelector('#dashView:not([hidden])');
+    assert.ok(await page.isHidden('#loginView'));
 
     // Reload to prove persistence + session cookie.
     await page.reload();
@@ -307,24 +307,23 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     await page.waitForFunction(() => document.getElementById('meta').textContent.includes('אולמי הגן'));
     assert.match(await page.textContent('h1'), /ליאור/);
 
-    // Logout blocks access again and returns to the guest page.
-    await page.goto(BASE + '/admin');
+    // Logout blocks access again and shows the login screen.
+    await page.goto(BASE + ADMIN_PATH);
     await page.waitForSelector('#dashView:not([hidden])');
     await page.click('#logoutBtn');
-    await page.waitForURL(BASE + '/');
+    await page.waitForSelector('#loginView:not([hidden])');
     assert.equal(await page.evaluate(() => fetch('/api/admin/responses').then((x) => x.status)), 401);
 
     // The second organizer account works too (and only these two accounts exist).
     const second = await (await browser.newContext(PHONE)).newPage();
-    await second.goto(BASE + '/?admin');
-    await second.waitForSelector('#loginDialog[open]');
-    await second.fill('#loginUser', USERNAME_2);
-    await second.fill('#loginPass', PASSWORD);
+    await second.goto(BASE + ADMIN_PATH);
+    await second.waitForSelector('#loginView:not([hidden])');
+    await second.fill('#username', USERNAME_2);
+    await second.fill('#password', PASSWORD);
     await second.click('#loginSubmit');
     await second.waitForFunction(() => document.getElementById('loginError').textContent === 'שם משתמש או סיסמה שגויים');
-    await second.fill('#loginPass', PASSWORD_2);
+    await second.fill('#password', PASSWORD_2);
     await second.click('#loginSubmit');
-    await second.waitForURL(BASE + '/admin');
     await second.waitForSelector('#dashView:not([hidden])');
     assert.equal(await second.locator('#rows tr').count(), 8);
 

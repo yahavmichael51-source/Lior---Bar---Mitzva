@@ -45,7 +45,7 @@ http
       res.writeHead(response.status, headers);
       return res.end(Buffer.from(await response.arrayBuffer()));
     }
-    let p = url.pathname === '/' ? '/index.html' : url.pathname === '/admin' ? '/admin.html' : url.pathname;
+    let p = url.pathname === '/' ? '/index.html' : url.pathname === '/nihul-lior' ? '/nihul-lior.html' : url.pathname;
     fs.readFile(path.join(root, 'public', path.normalize(p)), (err, data) => {
       if (err) { res.writeHead(404); return res.end(); }
       res.writeHead(200, { ...pageHeaders, 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream' });

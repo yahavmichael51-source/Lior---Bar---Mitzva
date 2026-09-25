@@ -8,9 +8,10 @@
 [functions]
   node_bundler = "esbuild"
 
+# The organizer page lives only at this separate link (not linked from the guest page).
 [[redirects]]
-  from = "/admin"
-  to = "/admin.html"
+  from = "/nihul-lior"
+  to = "/nihul-lior.html"
   status = 200
 
 [[headers]]
@@ -23,7 +24,7 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 [[headers]]
-  for = "/admin*"
+  for = "/nihul-lior*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-cache"

@@ -12,7 +12,7 @@
     if (opts.body) opts.headers = { 'Content-Type': 'application/json' };
     return fetch(url, opts).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (body) {
-        if (r.status === 401) { goToLogin(); throw new Error('נדרשת התחברות'); }
+        if (r.status === 401 && url.indexOf('/login') === -1) { showLogin(); throw new Error('נדרשת התחברות'); }
         if (!r.ok) throw new Error(body.error || 'אירעה שגיאה');
         return body;
       });
@@ -20,8 +20,12 @@
   }
 
   // Not logged in: go to the guest page, which opens the login window (there is no separate login page).
-  function goToLogin() { window.location.replace('/?admin'); }
-  function showDash() { $('dashView').hidden = false; }
+  function showLogin() {
+    $('dashView').hidden = true;
+    $('loginView').hidden = false;
+    $('username').focus();
+  }
+  function showDash() { $('loginView').hidden = true; $('dashView').hidden = false; }
 
   function load() {
     return api('/api/admin/responses').then(function (data) {
@@ -152,7 +156,7 @@
   $('filter').addEventListener('change', function () { state.filter = this.value; render(); });
   $('refreshBtn').addEventListener('click', function () { load().catch(function () {}); });
   $('logoutBtn').addEventListener('click', function () {
-    api('/api/admin/logout', { method: 'POST' }).finally(function () { window.location.replace('/'); });
+    api('/api/admin/logout', { method: 'POST' }).finally(function () { $('password').value = ''; showLogin(); });
   });
 
   $('eventForm').addEventListener('submit', function (e) {
@@ -169,10 +173,18 @@
   // Keep the numbers fresh while the page is open.
   setInterval(function () { if (!$('dashView').hidden && !$('editDialog').open) load().catch(function () {}); }, 30000);
 
+  $('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('loginError').textContent = '';
+    $('loginSubmit').disabled = true;
+    api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: $('username').value, password: $('password').value }) })
+      .then(function () { $('password').value = ''; return load(); })
+      .catch(function (err) { $('loginError').textContent = err.message; })
+      .finally(function () { $('loginSubmit').disabled = false; });
+  });
+  $('loginForm').addEventListener('input', function () { $('loginError').textContent = ''; });
+
   load()
-    .then(function () {
-      try { localStorage.setItem('rsvp-admin-device', '1'); } catch (e) {}
-    })
     .catch(function (err) {
       if (err.message === 'נדרשת התחברות') return;
       showDash();

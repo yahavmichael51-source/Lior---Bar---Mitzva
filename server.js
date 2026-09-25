@@ -36,7 +36,7 @@ function readBody(req) {
 
 function serveStatic(res, pathname) {
   if (pathname === '/') pathname = '/index.html';
-  if (pathname === '/admin' || pathname === '/admin/') pathname = '/admin.html';
+  if (pathname === '/nihul-lior' || pathname === '/nihul-lior/') pathname = '/nihul-lior.html';
   const file = path.normalize(path.join(PUBLIC_DIR, pathname));
   if (!file.startsWith(PUBLIC_DIR + path.sep)) return notFound(res);
   fs.readFile(file, (err, data) => {

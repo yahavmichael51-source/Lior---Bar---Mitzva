@@ -41,12 +41,11 @@ async function answer(page, first, last, statusLabel, peopleLabel) {
   const newPhone = async () => (await browser.newContext(PHONE)).newPage();
   const adminRows = async () => {
     const admin = await newPhone();
-    await admin.goto(BASE + '/?admin');
-    await admin.waitForSelector('#loginDialog[open]');
-    await admin.fill('#loginUser', 'sarit');
-    await admin.fill('#loginPass', 'pw');
+    await admin.goto(BASE + '/nihul-lior');
+    await admin.waitForSelector('#loginView:not([hidden])');
+    await admin.fill('#username', 'sarit');
+    await admin.fill('#password', 'pw');
     await admin.click('#loginSubmit');
-    await admin.waitForURL(BASE + '/admin');
     await admin.waitForSelector('#dashView:not([hidden])');
     const data = await admin.evaluate(() => fetch('/api/admin/responses').then((r) => r.json()));
     return { admin, data };
