@@ -23,7 +23,7 @@ async function waitForServer() {
 const PHONE = { viewport: { width: 390, height: 844 } };
 
 // Each guest answers from their own "phone" (a fresh browser context with empty storage).
-async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel, otherCount) {
+async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel, otherCount, sameName) {
   const context = await browser.newContext(PHONE);
   const page = await context.newPage();
   await page.goto(BASE + '/');
@@ -36,8 +36,14 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
   assert.equal(await page.isVisible('#otherCount'), peopleLabel === 'אחר', 'other-count field visibility');
   if (otherCount !== undefined) await page.fill('#otherCount', String(otherCount));
   await page.click('#submitBtn');
+  if (sameName) {
+    // The name already answered: the guest is asked whether it's them before anything is saved.
+    await page.waitForSelector('#matchCard:not([hidden])');
+    assert.match(await page.textContent('#matchText'), new RegExp(`${firstName} ${lastName}`));
+    await page.click(sameName === 'me' ? '#matchMe' : '#matchOther');
+  }
   await page.waitForSelector('#thanksCard:not([hidden])');
-  assert.match(await page.textContent('#thanksText'), /נשמרה/);
+  assert.match(await page.textContent('#thanksText'), sameName === 'me' ? /עודכנה/ : /נשמרה/);
   await context.close();
 }
 
@@ -94,7 +100,9 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     await submitRsvp(browser, 'נועה', 'ביטון', 'מגיע/ה', 'אני + 4');   // 5
     await submitRsvp(browser, 'שרה', 'אברהם', 'מגיע/ה', 'אחר', 7);     // 7
     await submitRsvp(browser, 'משה', 'דהן', 'לא מגיע/ה');
-    await submitRsvp(browser, 'יוסי', 'כהן', 'עוד לא יודע/ת');         // same name: must stay a separate row
+    await submitRsvp(browser, 'יוסי', 'כהן', 'עוד לא יודע/ת', undefined, undefined, 'other'); // a different Yossi Cohen: separate row
+    r = await fetch(BASE + '/api/rsvp', { method: 'POST', body: JSON.stringify({ firstName: ' יוסי ', lastName: 'כהן', status: 'no' }) });
+    assert.equal(r.status, 409, 'same name (ignoring spaces) is detected');
 
     // A guest who wasn't sure changes their answer twice, from the same phone.
     const guestCtx = await browser.newContext(PHONE);
@@ -139,7 +147,7 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
     await guest.click('#submitBtn');
     await guest.waitForSelector('#thanksCard:not([hidden])');
     // Only the token holder can read or change an answer.
-    const [{ id: ownId }] = await guest.evaluate(() => JSON.parse(localStorage.getItem('rsvp-mine')));
+    const [{ id: ownId, token: ownToken }] = await guest.evaluate(() => JSON.parse(localStorage.getItem('rsvp-mine')));
     r = await fetch(BASE + '/api/rsvp/' + ownId);
     assert.equal(r.status, 404, 'no token → no access');
     r = await fetch(BASE + '/api/rsvp/' + ownId, {
@@ -148,12 +156,37 @@ async function submitRsvp(browser, firstName, lastName, statusLabel, peopleLabel
       body: JSON.stringify({ firstName: 'x', lastName: 'y', status: 'no' }),
     });
     assert.equal(r.status, 404, 'wrong token → no access');
+    r = await fetch(BASE + '/api/rsvp/' + ownId, { headers: { 'X-Edit-Token': ownToken } });
+    assert.equal(r.status, 200, 'the right token works');
     // "Send for someone else" from the same phone starts a blank form.
     await guest.goto(BASE + '/');
     await guest.waitForSelector('#mineCard:not([hidden])');
     await guest.click('#newForOther');
     assert.equal(await guest.inputValue('#firstName'), '');
     await guestCtx.close();
+
+    // Days later Ido opens the link on a DIFFERENT phone: typing his name finds his earlier answer,
+    // "that's me" updates it (no new row), and the new phone can then change it again too.
+    await submitRsvp(browser, 'עידו', 'שלום', 'לא מגיע/ה', undefined, undefined, 'me');
+    const phone2Ctx = await browser.newContext(PHONE);
+    const phone2 = await phone2Ctx.newPage();
+    await phone2.goto(BASE + '/');
+    await phone2.fill('#firstName', 'עידו');
+    await phone2.fill('#lastName', 'שלום');
+    await phone2.getByRole('radio', { name: 'מגיע/ה', exact: true }).check();
+    await phone2.getByRole('radio', { name: 'אני + 2', exact: true }).check();
+    await phone2.click('#submitBtn');
+    await phone2.waitForSelector('#matchCard:not([hidden])');
+    assert.match(await phone2.textContent('#matchText'), /לא מגיע\/ה/, 'shows the earlier answer');
+    await phone2.click('#matchMe');
+    await phone2.waitForSelector('#thanksCard:not([hidden])');
+    await phone2.goto(BASE + '/');
+    await phone2.waitForSelector('#mineCard:not([hidden])');
+    assert.match(await phone2.textContent('#mineList'), /מגיע\/ה · 3 אנשים/);
+    await phone2Ctx.close();
+    // The first phone's code no longer works: only the phone that last claimed the answer can change it.
+    r = await fetch(BASE + '/api/rsvp/' + ownId, { headers: { 'X-Edit-Token': ownToken } });
+    assert.equal(r.status, 404);
     // Expected: 7 "coming" responses, 1+2+3+4+5+7+3 = 25 people, 18 companions; 9 responses.
 
     // Admin data is protected.

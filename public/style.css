@@ -217,3 +217,8 @@ table.mini th, table.mini td { padding: 8px 10px; }
 }
 .thanks .note { font-size: 16px; }
 .stack { display: grid; gap: 10px; }
+
+/* ---------- guest: same-name confirmation ---------- */
+.match h2 { margin: 0 0 8px; color: var(--navy); font-size: 22px; }
+.match p { margin: 0 0 12px; }
+.match .error { margin: 12px 0 0; }

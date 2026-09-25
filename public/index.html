@@ -96,6 +96,18 @@
       </form>
     </section>
 
+    <section class="card match" id="matchCard" hidden>
+      <h2>כבר קיבלנו תשובה בשם הזה</h2>
+      <p id="matchText"></p>
+      <p class="note">אם זה את/ה, נעדכן את התשובה הקודמת במקום להוסיף תשובה חדשה.</p>
+      <div class="stack">
+        <button type="button" class="btn primary" id="matchMe">כן, זה אני. לעדכן את התשובה שלי</button>
+        <button type="button" class="btn" id="matchOther">לא, אני אדם אחר עם אותו שם</button>
+        <button type="button" class="btn small" id="matchBack">חזרה לטופס</button>
+      </div>
+      <p class="error" id="matchError" role="alert"></p>
+    </section>
+
     <section class="card thanks" id="thanksCard" hidden>
       <div class="check" aria-hidden="true">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>

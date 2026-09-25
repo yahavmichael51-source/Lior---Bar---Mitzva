@@ -65,6 +65,7 @@
   function show(which) {
     $('mineCard').hidden = which !== 'mine';
     $('formCard').hidden = which !== 'form';
+    $('matchCard').hidden = which !== 'match';
     $('thanksCard').hidden = which !== 'thanks';
     window.scrollTo(0, 0);
   }
@@ -215,32 +216,74 @@
 
     call
       .then(function (res) {
+        if (res.status === 409 && res.body.match) return askIfSamePerson(payload, res.body.match);
         if (!res.ok) throw new Error(res.body.error || 'error');
-        if (wasEditing) lastSaved = wasEditing;
-        else {
-          lastSaved = { id: res.body.response.id, token: res.body.editToken };
-          remember(lastSaved.id, lastSaved.token);
-        }
-        editing = null;
-        var text = {
-          yes: 'מחכים לראות אותך!',
-          no: 'חבל שלא תוכל/י להגיע.',
-          maybe: 'אפשר לחזור ולעדכן כשתדע/י.'
-        }[status];
-        $('thanksTitle').textContent = 'תודה, ' + firstName + '!';
-        $('thanksText').textContent = (wasEditing ? 'התשובה עודכנה. ' : 'התשובה שלך נשמרה. ') + text;
-        show('thanks');
+        saved(res, payload, wasEditing);
       })
-      .catch(function (err) {
-        errorEl.textContent = err.message && err.message !== 'error' && err.message !== 'Failed to fetch'
-          ? err.message
-          : 'לא הצלחנו לשמור את התשובה. בדקו את החיבור לאינטרנט ונסו שוב.';
-      })
+      .catch(function (err) { errorEl.textContent = errorText(err); })
       .finally(function () {
         submitBtn.disabled = false;
         submitBtn.textContent = label;
       });
   });
+
+  function errorText(err) {
+    return err.message && err.message !== 'error' && err.message !== 'Failed to fetch'
+      ? err.message
+      : 'לא הצלחנו לשמור את התשובה. בדקו את החיבור לאינטרנט ונסו שוב.';
+  }
+
+  // Shows the thank-you screen and remembers the answer on this phone so it can be changed later.
+  function saved(res, payload, wasEditing) {
+    var updated = !!(wasEditing || res.body.replaced);
+    if (wasEditing) lastSaved = wasEditing;
+    else {
+      lastSaved = { id: res.body.response.id, token: res.body.editToken };
+      remember(lastSaved.id, lastSaved.token);
+    }
+    editing = null;
+    var text = {
+      yes: 'מחכים לראות אותך!',
+      no: 'חבל שלא תוכל/י להגיע.',
+      maybe: 'אפשר לחזור ולעדכן כשתדע/י.'
+    }[payload.status];
+    $('thanksTitle').textContent = 'תודה, ' + payload.firstName + '!';
+    $('thanksText').textContent = (updated ? 'התשובה עודכנה. ' : 'התשובה שלך נשמרה. ') + text;
+    show('thanks');
+  }
+
+  // ---------- "we already have an answer under this name" ----------
+  var pending = null; // { payload, match }
+  var dateFmt = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric' });
+
+  function askIfSamePerson(payload, match) {
+    pending = { payload: payload, match: match };
+    $('matchText').textContent =
+      'ב־' + dateFmt.format(new Date(match.createdAt)) + ' נשלחה תשובה בשם ' +
+      (match.firstName + ' ' + match.lastName).trim() + ': ' + describe(match) + '.';
+    $('matchError').textContent = '';
+    show('match');
+  }
+
+  function sendPending(extra) {
+    if (!pending) return;
+    var body = Object.assign({}, pending.payload, extra);
+    var buttons = [$('matchMe'), $('matchOther')];
+    buttons.forEach(function (b) { b.disabled = true; });
+    request('POST', '/api/rsvp', null, body)
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.body.error || 'error');
+        var p = pending.payload;
+        pending = null;
+        saved(res, p, null);
+      })
+      .catch(function (err) { $('matchError').textContent = errorText(err); })
+      .finally(function () { buttons.forEach(function (b) { b.disabled = false; }); });
+  }
+
+  $('matchMe').addEventListener('click', function () { sendPending({ replaceId: pending.match.id }); });
+  $('matchOther').addEventListener('click', function () { sendPending({ confirmNew: true }); });
+  $('matchBack').addEventListener('click', function () { pending = null; show('form'); });
 
   $('changeBtn').addEventListener('click', function () {
     if (!lastSaved) return startNew();
